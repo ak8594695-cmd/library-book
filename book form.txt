@@ -1,0 +1,207 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertBookSchema, type InsertBook, type Book } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface BookFormProps {
+  book?: Book;
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (book: InsertBook) => void;
+}
+
+export default function BookForm({ book, isOpen, onClose, onSubmit }: BookFormProps) {
+  const form = useForm<InsertBook>({
+    resolver: zodResolver(insertBookSchema),
+    defaultValues: {
+      title: book?.title || "",
+      author: book?.author || "",
+      isbn: book?.isbn || "",
+      genre: book?.genre || "",
+      publicationYear: book?.publicationYear || undefined,
+      description: book?.description || "",
+    },
+  });
+
+  const handleSubmit = (data: InsertBook) => {
+    console.log('Form submitted:', data);
+    onSubmit(data);
+    form.reset();
+    onClose();
+  };
+
+  const handleClose = () => {
+    form.reset();
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px]" data-testid="dialog-book-form">
+        <DialogHeader>
+          <DialogTitle data-testid="text-form-title">
+            {book ? "Edit Book" : "Add New Book"}
+          </DialogTitle>
+          <DialogDescription>
+            {book ? "Update the book information below." : "Add a new book to your library."}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter book title" 
+                        {...field} 
+                        data-testid="input-title"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="author"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Author *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter author name" 
+                        {...field} 
+                        data-testid="input-author"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="genre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Genre</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., Fiction" 
+                          {...field} 
+                          data-testid="input-genre"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="publicationYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Year</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="e.g., 2023"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          value={field.value || ""}
+                          data-testid="input-year"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="isbn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ISBN</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., 9781234567890" 
+                        {...field} 
+                        data-testid="input-isbn"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Brief description of the book..." 
+                        {...field} 
+                        rows={3}
+                        data-testid="input-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClose}
+                data-testid="button-cancel"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                data-testid="button-save"
+              >
+                {book ? "Update Book" : "Add Book"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

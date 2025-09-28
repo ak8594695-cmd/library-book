@@ -1,0 +1,175 @@
+import { useState, useEffect } from "react";
+import { Book, InsertBook } from "@shared/schema";
+import BookList from "./BookList";
+import BookForm from "./BookForm";
+import SearchBar from "./SearchBar";
+import { Button } from "@/components/ui/button";
+import { Plus, BookOpen } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+// Local storage key
+const BOOKS_STORAGE_KEY = "book-manager-books";
+
+export default function BookManager() {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Load books from localStorage on mount
+  useEffect(() => {
+    const savedBooks = localStorage.getItem(BOOKS_STORAGE_KEY);
+    if (savedBooks) {
+      try {
+        const parsed = JSON.parse(savedBooks);
+        setBooks(parsed);
+      } catch (error) {
+        console.error("Error loading books from storage:", error);
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  // Save books to localStorage whenever books change
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem(BOOKS_STORAGE_KEY, JSON.stringify(books));
+    }
+  }, [books, isLoading]);
+
+  const generateId = () => `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const handleAddBook = (bookData: InsertBook) => {
+    const newBook: Book = {
+      ...bookData,
+      id: generateId(),
+    };
+    setBooks(prev => [...prev, newBook]);
+    toast({
+      title: "Book Added",
+      description: `"${bookData.title}" has been added to your library.`,
+    });
+    console.log('Book added:', newBook);
+  };
+
+  const handleEditBook = (bookData: InsertBook) => {
+    if (!editingBook) return;
+    
+    const updatedBook: Book = {
+      ...editingBook,
+      ...bookData,
+    };
+    
+    setBooks(prev => prev.map(book => 
+      book.id === editingBook.id ? updatedBook : book
+    ));
+    
+    toast({
+      title: "Book Updated",
+      description: `"${bookData.title}" has been updated.`,
+    });
+    console.log('Book updated:', updatedBook);
+  };
+
+  const handleSubmit = (bookData: InsertBook) => {
+    if (editingBook) {
+      handleEditBook(bookData);
+    } else {
+      handleAddBook(bookData);
+    }
+  };
+
+  const handleEdit = (book: Book) => {
+    setEditingBook(book);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    const bookToDelete = books.find(book => book.id === id);
+    setBooks(prev => prev.filter(book => book.id !== id));
+    
+    if (bookToDelete) {
+      toast({
+        title: "Book Deleted",
+        description: `"${bookToDelete.title}" has been removed from your library.`,
+        variant: "destructive",
+      });
+    }
+    console.log('Book deleted:', id);
+  };
+
+  const handleAdd = () => {
+    setEditingBook(undefined);
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingBook(undefined);
+  };
+
+  // Filter books based on search query
+  const filteredBooks = books.filter(book =>
+    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (book.genre && book.genre.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (book.isbn && book.isbn.includes(searchQuery))
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold" data-testid="text-app-title">Book Manager</h1>
+              <p className="text-muted-foreground" data-testid="text-app-subtitle">
+                Organize and manage your personal library
+              </p>
+            </div>
+          </div>
+          
+          <Button onClick={handleAdd} data-testid="button-add-book">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Book
+          </Button>
+        </div>
+
+        {/* Search and Stats */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by title, author, genre, or ISBN..."
+          />
+          
+          <div className="text-sm text-muted-foreground" data-testid="text-book-count">
+            {filteredBooks.length} of {books.length} books
+            {searchQuery && ` matching "${searchQuery}"`}
+          </div>
+        </div>
+
+        {/* Book List */}
+        <BookList
+          books={filteredBooks}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAdd={handleAdd}
+          isLoading={isLoading}
+        />
+
+        {/* Book Form Modal */}
+        <BookForm
+          book={editingBook}
+          isOpen={isFormOpen}
+          onClose={handleCloseForm}
+          onSubmit={handleSubmit}
+        />
+      </div>
+    </div>
+  );
+}
